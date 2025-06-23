@@ -1,18 +1,18 @@
-# Use a Go base image
+# Usamos una imagen base de Go
 FROM golang:1.24-alpine
 
-# Set working directory inside the container
+# Seteamos el directorio de trabajo dentro del contenedor
 WORKDIR /app
 
-# Copy project files to the container
+# Copiamos los archivos del proyecto al contenedor
 COPY go.mod go.sum ./
 RUN go mod download
 
-# Copy source code to the container
+# Copiamos el código fuente al contenedor
 COPY . .
 
-# Expose the port where the service runs
+# Exponemos el puerto donde corre el servicio
 EXPOSE 5016
 
-# Command to start the application
+# Comando para iniciar la aplicación
 CMD ["go", "run", "main.go"]
