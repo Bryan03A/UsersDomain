@@ -25,10 +25,10 @@ jobs:
             mkdir -p ~/deploy-envs
 
             cd ~/deploy-code
-            if [ -d "UserDomain" ]; then
-              cd UserDomain && git pull origin main && cd ..
+            if [ -d "UsersDomain" ]; then
+              cd UsersDomain && git pull origin test && cd ..
             else
-              git clone $REPO_CODE
+              git clone -b test $REPO_CODE
             fi
 
             cd ~/deploy-envs
@@ -38,27 +38,27 @@ jobs:
               git clone $REPO_ENVS
             fi
 
-            if [ -d ~/deploy-envs/DomainUsers-envs/UserDomain ]; then
-              cp -r -f ~/deploy-envs/DomainUsers-envs/UserDomain/* ~/deploy-code/UserDomain/
+            if [ -d ~/deploy-envs/DomainUsers-envs/UsersDomain ]; then
+              cp -r -f ~/deploy-envs/DomainUsers-envs/UsersDomain/* ~/deploy-code/UsersDomain/
             fi
 
             docker login -u bfury0329 -p "${{ secrets.DOCKER_HUB_PASSWORD }}"
 
             docker network inspect app-network >/dev/null 2>&1 || docker network create app-network
 
-            cd ~/deploy-code/UserDomain
+            cd ~/deploy-code/UsersDomain
 
             for dir in */ ; do
               service=$(basename "$dir")
               if [ -f "$dir/Dockerfile" ]; then
+                echo "Procesando $service..."
                 docker build -t bfury0329/${service}:latest "./$dir"
                 docker push bfury0329/${service}:latest
                 docker rm -f "${service}" 2>/dev/null || true
 
-                # Leer puerto expuesto del Dockerfile (el primero que encuentre)
                 port=$(grep -i '^EXPOSE' "$dir/Dockerfile" | head -n 1 | awk '{print $2}')
                 if [ -z "$port" ]; then
-                  port=7000  # default si no encuentra EXPOSE
+                  port=7000
                 fi
 
                 docker run -d --name "${service}" --network app-network -p ${port}:${port} bfury0329/${service}:latest
