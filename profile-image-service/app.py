@@ -20,6 +20,16 @@ s3 = boto3.client('s3',
 
 BUCKET_NAME = os.getenv("AWS_BUCKET_NAME")
 
+def create_bucket_if_not_exists(bucket_name):
+    try:
+        s3.head_bucket(Bucket=bucket_name)
+        print(f"Bucket '{bucket_name}' already exists.")
+    except Exception:
+        s3.create_bucket(Bucket=bucket_name)
+        print(f"Bucket '{bucket_name}' created.")
+
+create_bucket_if_not_exists(BUCKET_NAME)
+
 @app.route('/upload_image', methods=['POST'])
 def upload_image():
     file = request.files['file']
