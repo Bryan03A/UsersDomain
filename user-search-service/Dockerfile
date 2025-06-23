@@ -11,6 +11,9 @@ RUN go mod download
 # Copiamos el código fuente al contenedor
 COPY . .
 
+# Copy the .env file
+COPY .env /app/
+
 # Exponemos el puerto donde corre el servicio
 EXPOSE 5016
 
