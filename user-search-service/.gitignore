@@ -1,0 +1,16 @@
+# Go-specific files
+*.log
+*.test
+*.out
+*.swp
+
+# Go dependencies and modules
+/vendor/
+
+# IDE-specific configuration files (e.g., VSCode, JetBrains)
+.vscode/
+.idea/
+
+# Operating system files
+.DS_Store
+Thumbs.db
