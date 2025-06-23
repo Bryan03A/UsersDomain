@@ -6,7 +6,7 @@ const sessionRoutes = require('./routes/sessions');
 const authenticateToken = require('./middlewares/authMiddleware');
 const cors = require('cors');
 
-// MongoDB connection string
+// MongoDB connection string  🚀
 const MONGO_URI = process.env.MONGO_URI;
 const PORT = process.env.PORT || 5004;
 

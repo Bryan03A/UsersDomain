@@ -15,7 +15,7 @@ import (
 	"github.com/rs/cors"
 )
 
-// Configuración de la base de datos PostgreSQL
+// Configuración de la base de datos PostgreSQL  🚀
 const (
 	POSTGRESQL_HOST     = "aws-0-us-west-1.pooler.supabase.com"
 	POSTGRESQL_PORT     = 6543

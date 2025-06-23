@@ -10,7 +10,7 @@ dotenv.config();
 const app = express();
 const port = process.env.PORT || 5020;
 
-// CORS configuration
+// CORS configuration  🚀
 app.use(cors({
     origin: 'http://3.212.132.24:8080',
     methods: ['GET', 'POST', 'PUT', 'DELETE'],

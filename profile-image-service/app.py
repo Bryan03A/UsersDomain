@@ -10,7 +10,7 @@ load_dotenv()
 app = Flask(__name__)
 CORS(app, origins=["http://3.212.132.24:8080", "*"])
 
-# Configuration MinIO
+# Configuration MinIO  🚀
 s3 = boto3.client('s3',
     endpoint_url=os.getenv("AWS_ENDPOINT_URL"),
     aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),

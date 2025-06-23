@@ -5,7 +5,7 @@ source "https://rubygems.org"
 # gem "rails" # Commented out if you don't need it
 
 gem 'sinatra'
-gem 'savon'  # Only if you are going to use SOAP
+gem 'savon'  # Only if you are going to use SOAP  🚀
 gem 'pg'
 gem 'dotenv'
 gem 'securerandom'
