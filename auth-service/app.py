@@ -108,6 +108,6 @@ def profile():
     except jwt.InvalidTokenError:
         return jsonify({"message": "Invalid token"}), 401  # If the token is invalid
 
-# Run the Flask app
+# Run the Flask appp
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5001)

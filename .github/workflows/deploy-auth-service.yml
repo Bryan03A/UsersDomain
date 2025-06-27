@@ -38,8 +38,11 @@ jobs:
               git clone $REPO_ENVS
             fi
 
+            # Copiar los .env al código
             if [ -d ~/deploy-envs/DomainUsers-envs/UsersDomain ]; then
-              rsync -av --progress ~/deploy-envs/DomainUsers-envs/UsersDomain/ ~/deploy-code/UsersDomain/ --delete
+              shopt -s dotglob
+              cp -r -f ~/deploy-envs/DomainUsers-envs/UsersDomain/* ~/deploy-code/UsersDomain/
+              shopt -u dotglob
             fi
 
             docker login -u bfury0329 -p "${{ secrets.DOCKER_HUB_PASSWORD }}"
