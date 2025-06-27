@@ -38,8 +38,8 @@ jobs:
               git clone $REPO_ENVS
             fi
 
-            if [ -d ~/deploy-envs/DomainUsers-envs/UsersDomain ]; then
-              cp -r -f ~/deploy-envs/DomainUsers-envs/UserDomain/. ~/deploy-code/UserDomain/
+            if [ -d ~/deploy-envs/DomainUsers-envs/UserDomain ]; then
+              cp -r -f ~/deploy-envs/DomainUsers-envs/UserDomain/. ~/deploy-code/UsersDomain/
             fi
 
             docker login -u bfury0329 -p "${{ secrets.DOCKER_HUB_PASSWORD }}"
