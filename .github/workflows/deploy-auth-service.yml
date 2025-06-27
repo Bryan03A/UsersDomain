@@ -39,7 +39,7 @@ jobs:
             fi
 
             if [ -d ~/deploy-envs/DomainUsers-envs/UsersDomain ]; then
-              cp -r -f ~/deploy-envs/DomainUsers-envs/UsersDomain/. ~/deploy-code/UsersDomain/
+              rsync -av --progress ~/deploy-envs/DomainUsers-envs/UsersDomain/ ~/deploy-code/UsersDomain/ --delete
             fi
 
             docker login -u bfury0329 -p "${{ secrets.DOCKER_HUB_PASSWORD }}"
