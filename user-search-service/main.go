@@ -121,7 +121,7 @@ func main() {
 
 	// Configurar CORS
 	c := cors.New(cors.Options{
-		AllowedOrigins:   []string{"http://3.212.132.24:8080"}, // Origen permitido (el servidor de la interfaz gráfica)
+		AllowedOrigins:   []string{"http://3.227.120.143:8080"}, // Origen permitido (el servidor de la interfaz gráfica)
 		AllowedMethods:   []string{"GET", "POST"},
 		AllowedHeaders:   []string{"Content-Type"},
 		AllowCredentials: true,

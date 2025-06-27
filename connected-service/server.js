@@ -12,7 +12,7 @@ const port = process.env.PORT || 5020;
 
 // CORS configuration  🚀
 app.use(cors({
-    origin: 'http://3.212.132.24:8080',
+    origin: 'http://3.227.120.143:8080',
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true
