@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# app = Flask(__name__)
+app = Flask(__name__)
 # CORS(app, origins=["http://3.227.120.143:8080"])
 
 # Configuration MinIO  🚀
