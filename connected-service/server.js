@@ -11,12 +11,12 @@ const app = express();
 const port = process.env.PORT || 5020;
 
 // CORS configuration  🚀
-app.use(cors({
-    origin: 'http://3.227.120.143:8080',
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-    credentials: true
-}));
+//app.use(cors({
+//    origin: 'http://3.227.120.143:8080',
+//    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+//    allowedHeaders: ['Content-Type', 'Authorization'],
+//    credentials: true
+//}));
 
 // PostgreSQL EC2 connection
 const pgClient = new Client({
