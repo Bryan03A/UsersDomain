@@ -92,7 +92,7 @@ app.get('/last-connection', async (req, res) => {
 });
 
 // Health check endpoint for load balancer
-app.get('/health', async (req, res) => {
+app.get('/connected/health', async (req, res) => {
     try {
         await pgClient.query('SELECT 1');
         await mongoose.connection.db.admin().ping();

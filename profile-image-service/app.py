@@ -61,7 +61,7 @@ def list_images():
         return jsonify({"error": str(e)}), 500
 
 # Health check endpoint for load balancer
-@app.route('/health', methods=['GET'])
+@app.route('/profile-image/health', methods=['GET'])
 def health_check():
     try:
         s3.list_buckets()

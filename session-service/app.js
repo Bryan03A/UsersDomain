@@ -27,7 +27,7 @@ const app = express();
 app.use(express.json());
 app.use('/api/sessions', sessionRoutes);
 
-app.get('/health', (req, res) => {
+app.get('/session/health', (req, res) => {
     res.status(200).json({ status: 'healthy' });
 });
 

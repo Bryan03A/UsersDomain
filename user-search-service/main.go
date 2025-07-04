@@ -106,7 +106,7 @@ func main() {
 
 	r := mux.NewRouter()
 	r.HandleFunc("/user/soap", getUserByUsernameSOAP).Methods("GET")
-	r.HandleFunc("/health", healthCheck).Methods("GET")
+	r.HandleFunc("/user-search/health", healthCheck).Methods("GET")
 
 	c := cors.New(cors.Options{
 		AllowedOrigins:   []string{"http://3.227.120.143:8080"},

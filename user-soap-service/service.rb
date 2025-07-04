@@ -78,7 +78,7 @@ def hash_password(password)
 end
 
 # Health check endpoint for Load Balancer
-get '/health' do
+get '/user-soap/health' do
   begin
     DB.exec("SELECT 1")
     status 200

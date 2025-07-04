@@ -36,7 +36,7 @@ def generate_token(user) -> str:
     return jwt.encode(payload, app.config['SECRET_KEY'], algorithm='HS256')
 
 # ───────────── Endpoints ─────────────
-@app.route('/health', methods=['GET'])
+@app.route('/auth/health', methods=['GET'])
 def health():
     try:
         db.session.execute(text("SELECT 1"))
