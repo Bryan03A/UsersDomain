@@ -27,6 +27,17 @@ const app = express();
 app.use(express.json());
 app.use('/api/sessions', sessionRoutes);
 
+app.get('/health', async (req, res) => {
+    try {
+        await pgClient.query('SELECT 1');                  // Check PostgreSQL
+        await mongoose.connection.db.admin().ping();       // Check MongoDB
+        res.status(200).json({ status: 'healthy' });
+    } catch (error) {
+        console.error('❌ Health check failed:', error.message);
+        res.status(500).json({ status: 'unhealthy', error: error.message });
+    }
+});
+
 // Connect to MongoDB
 mongoose.set('strictQuery', false);
 mongoose.connect(MONGO_URI, {
