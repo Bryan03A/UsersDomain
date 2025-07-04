@@ -10,15 +10,15 @@ dotenv.config();
 const app = express();
 const port = process.env.PORT || 5020;
 
-// CORS configuration  🚀
-//app.use(cors({
-//    origin: 'http://3.227.120.143:8080',
-//    methods: ['GET', 'POST', 'PUT', 'DELETE'],
-//    allowedHeaders: ['Content-Type', 'Authorization'],
-//    credentials: true
-//}));
+// CORS configuration (optional, uncomment to activate)
+// app.use(cors({
+//     origin: 'http://3.227.120.143:8080',
+//     methods: ['GET', 'POST', 'PUT', 'DELETE'],
+//     allowedHeaders: ['Content-Type', 'Authorization'],
+//     credentials: true
+// }));
 
-// PostgreSQL EC2 connection
+// Connect to PostgreSQL
 const pgClient = new Client({
     host: process.env.PG_HOST,
     port: process.env.PG_PORT,
@@ -30,19 +30,19 @@ const pgClient = new Client({
 pgClient.connect()
     .then(() => console.log('✅ Connected to PostgreSQL'))
     .catch(err => {
-        console.error('❌ Error connecting to PostgreSQL:', err);
+        console.error('❌ PostgreSQL connection error:', err);
         process.exit(1);
     });
 
-// MongoDB EC2 connection
+// Connect to MongoDB
 mongoose.connect(process.env.MONGO_URI)
     .then(() => console.log('✅ Connected to MongoDB'))
     .catch(err => {
-        console.error('❌ Error connecting to MongoDB:', err);
+        console.error('❌ MongoDB connection error:', err);
         process.exit(1);
     });
 
-// Session model
+// Define the session schema
 const sessionSchema = new mongoose.Schema({
     userId: String,
     createdAt: Date,
@@ -50,19 +50,24 @@ const sessionSchema = new mongoose.Schema({
 });
 const Session = mongoose.model('Session', sessionSchema);
 
-// Route to get the user's last connection
+// Utility: send standardized error responses
+const sendError = (res, status, message) => {
+    return res.status(status).json({ error: message });
+};
+
+// Endpoint: Get user's last session
 app.get('/last-connection', async (req, res) => {
     const { username } = req.query;
 
     if (!username) {
-        return res.status(400).json({ error: 'Username must be provided.' });
+        return sendError(res, 400, 'Username must be provided.');
     }
 
     try {
         const result = await pgClient.query('SELECT id FROM "user" WHERE username = $1', [username]);
 
         if (result.rows.length === 0) {
-            return res.status(404).json({ error: 'User not found.' });
+            return sendError(res, 404, 'User not found.');
         }
 
         const userId = result.rows[0].id;
@@ -70,7 +75,7 @@ app.get('/last-connection', async (req, res) => {
         const lastSession = await Session.findOne({ userId }).sort({ createdAt: -1 });
 
         if (!lastSession) {
-            return res.status(404).json({ error: 'No sessions found for this user.' });
+            return sendError(res, 404, 'No sessions found for this user.');
         }
 
         const timeAgo = moment(lastSession.createdAt).fromNow();
@@ -81,11 +86,24 @@ app.get('/last-connection', async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error:', error);
-        return res.status(500).json({ error: 'An internal server error occurred.' });
+        console.error('❌ Internal error:', error);
+        return sendError(res, 500, 'An internal server error occurred.');
     }
 });
 
+// Health check endpoint for load balancer
+app.get('/health', async (req, res) => {
+    try {
+        await pgClient.query('SELECT 1');
+        await mongoose.connection.db.admin().ping();
+        res.status(200).json({ status: 'healthy' });
+    } catch (err) {
+        console.error('❌ Health check failed:', err);
+        res.status(500).json({ status: 'unhealthy', error: err.message });
+    }
+});
+
+// Start the server
 app.listen(port, '0.0.0.0', () => {
     console.log(`✅ Session Service running on port ${port}`);
 });
