@@ -42,7 +42,7 @@
 
   <service name="UserService">
     <port name="UserServicePort" binding="tns:UserServiceBinding">
-      <soap:address location="http://34.200.3.211:5002/user-service"/>
+      <soap:address location="http://50.19.4.172/user-soap/user-service"/>
     </port>
   </service>
 </definitions>

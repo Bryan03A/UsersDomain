@@ -8,6 +8,7 @@ gem 'sinatra'
 gem 'savon'  # Only if you are going to use SOAP  🚀
 gem 'pg'
 gem 'dotenv'
+gem 'nokogiri'
 gem 'securerandom'
 gem 'sinatra-cross_origin'  # To enable CORS in Sinatra
 gem 'rackup'
