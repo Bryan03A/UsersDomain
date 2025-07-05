@@ -10,6 +10,7 @@ This microservice is built with **Sinatra** (Ruby) and uses **PostgreSQL** to re
 - CORS enabled for browser-based SOAP clients
 - Health check endpoint for monitoring
 - Lightweight and efficient Sinatra server
+- Publishes `UserRegistered` events to the RabbitMQ `user-events` queue
 
 ## Endpoints
 | Endpoint                | Method | Description                       |
@@ -45,7 +46,14 @@ The code exemplifies the KISS principle with its direct implementation of SOAP l
                                                                  │
                                                            ┌─────▼─────┐
                                                            │PostgreSQL │
-                                                           └───────────┘
+                                                           └─────┬─────┘
+                                                                 │
+                                                                 │ Events published
+                                                          ┌──────▼───────┐
+                                                          │ RabbitMQ     │
+                                                          │ Queue:       │
+                                                          │ user-events  │
+                                                          └──────────────┘
 ```
 
 ## Environment Variables
@@ -54,6 +62,9 @@ The code exemplifies the KISS principle with its direct implementation of SOAP l
 - `POSTGRESQL_PORT`: Port number
 - `POSTGRESQL_USER`: DB user
 - `POSTGRESQL_PASSWORD`: DB password
+- `RABBITMQ_HOST`: RabbitMQ broker hostname
+- `RABBITMQ_PORT`: RabbitMQ port
+- `RABBITMQ_QUEUE`: RabbitMQ queue name (`user-events`)
 
 ## Running the Service
 ```bash

@@ -1,46 +1,44 @@
-# Session Tracking Service - Node.js + MongoDB
+# Session Service - Node.js / Express + PostgreSQL + MongoDB
 
 ## Description
-This microservice is responsible for managing and storing user session data. It is built using Express.js and MongoDB and provides a dedicated route group for session-related endpoints. It also exposes a health check endpoint for orchestration tools.
- 
+This microservice manages the full lifecycle of user sessions including creation, retrieval, update, and deletion. It connects to both PostgreSQL (for user data) and MongoDB (for session persistence), and uses Express for routing. It includes JWT token middleware for security and a health check endpoint for operational monitoring.
+
 ## Features
-- Connects to MongoDB to persist user sessions
-- Loads environment variables from `.env` for configuration
-- Middleware support for JSON parsing and authentication
-- Modular route management using Express Router
-- Health check endpoint to validate availability
-- CORS configuration placeholder for frontend interaction
+- Connects to PostgreSQL and MongoDB for relational user data and session data respectively
+- JWT-based token middleware for securing session-related routes
+- Modular architecture with separated controllers, routes, and middlewares
+- Publishes and consumes events using RabbitMQ with configurable queues and topics
+- Provides comprehensive REST endpoints to manage sessions
+- Health check endpoint for load balancers and orchestration tools
+- CORS support (optional)
 
 ## Endpoints
-| Endpoint              | Method | Description                          |
-|-----------------------|--------|--------------------------------------|
-| /api/sessions         | GET/POST/... | Handled in routes/sessions.js       |
-| /session/health       | GET    | Simple status response               |
+| Endpoint               | Method | Description                                 |
+|------------------------|--------|---------------------------------------------|
+| /last-connection       | GET    | Retrieves the user's last session info      |
+| /api/sessions          | POST   | Create a new session                         |
+| /api/sessions/:userId  | GET    | Retrieve sessions for a specific user       |
+| /api/sessions/:userId  | PUT    | Update a specific user session               |
+| /api/sessions/:userId  | DELETE | Delete a specific user session               |
+| /api/sessions/verify   | GET    | Verify session token                         |
+| /health                | GET    | Health check endpoint                        |
 
 ## Architecture Style
-The service follows a **KISS (Keep It Simple, Stupid)** design principle. It is intentionally straightforward, using built-in middleware, organized route imports, and a flat structure.
- 
-### 📌 Why KISS is the Most Applicable Design Principle
-The **KISS** principle fits this service perfectly due to its clarity and focus on essential responsibilities.
- 
-#### ✅ Justification:
-1. **Clean routing structure**:
-   - Session routes are offloaded to a separate module
-2. **Minimal logic in `app.js`**:
-   - Only connection setup and middleware
-3. **Sensible defaults and fallback behavior**:
-   - `.env` validation with early exit
-4. **Lightweight and extensible**:
-   - Easily scalable with more middleware or services if needed
- 
-#### ℹ️ Other Principles Present:
-- **YAGNI**: Implements only necessary features
-- **POLA**: Behavior aligns with common expectations (e.g., 200 OK on health)
- 
+The service follows **DRY (Don't Repeat Yourself)** and **Modular** design principles:
+
+- Separation of concerns into controllers, routes, and middleware for maintainability
+- Reuses code where appropriate to avoid duplication
+- Supports integration of both SQL and NoSQL databases transparently
+- Event-driven design via RabbitMQ enhances decoupling and scalability
+
+### 📌 Why DRY + Modular is the Most Applicable Design Principle
+- Controllers and routes are clearly separated, minimizing repeated logic
+- Middleware handles security aspects, centralizing authentication logic
+- Supports extension with minimal effort due to modular codebase
+
 ## Communication Type
-- **RESTful API** with JSON payloads
-- Accessed via Express Router under `/api/sessions`
- 
+- RESTful API using JSON for all session management operations
+
 ## External Communication Diagram
 ```
                     ┌────────────┐     REST/API     ┌────────────────────┐

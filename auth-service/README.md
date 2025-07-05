@@ -1,35 +1,36 @@
-# Authentication Microservice - Flask (JWT + PostgreSQL)
+# Authentication Microservice - Flask (JWT + PostgreSQL + RabbitMQ)
 
 ## Description
-This microservice handles basic authentication operations including login and profile retrieval using JWTs. It also exposes health check and database diagnostics endpoints. It follows the **KISS (Keep It Simple, Stupid)** architecture principle to ensure maintainability and simplicity.
+This microservice handles user authentication and profile retrieval using JWTs. Additionally, it emits domain events to a RabbitMQ queue, enabling event-driven architecture integration. It follows the **KISS (Keep It Simple, Stupid)** principle for clarity and scalability.
 
 ## Features
-- JWT-based authentication
-- PostgreSQL integration via SQLAlchemy
-- Password hashing with PBKDF2
-- Health check endpoint for load balancers
-- CORS ready (commented but pre-configured)
+- JWT-based stateless authentication with 1-hour expiry
+- PostgreSQL integration via SQLAlchemy (AWS RDS)
+- Password hashing with PBKDF2-HMAC-SHA256
+- RabbitMQ integration for publishing user-related events
+- Health check and database diagnostics endpoints
+- CORS support
 
 ## Endpoints
 
-| Endpoint     | Method | Description                                       |
-|--------------|--------|---------------------------------------------------|
-| /health      | GET    | Load balancer health check (DB ping)             |
-| /test-db     | GET    | Manual DB connection test (returns timestamp)    |
-| /login       | POST   | Login with username/email + password, returns JWT|
-| /profile     | GET    | Returns current user's profile info via JWT      |
+| Endpoint        | Method | Description                                           |
+|-----------------|--------|-------------------------------------------------------|
+| /auth/health    | GET    | Load balancer health check (DB ping)                  |
+| /test-db        | GET    | Manual DB connection test (returns timestamp)         |
+| /login          | POST   | Login with username/email + password, returns JWT     |
+| /profile        | GET    | Returns current user's profile info via JWT           |
+| /test-event     | GET    | Publishes a test event to RabbitMQ queue              |
 
+## Architecture: KISS + Event-Driven
 
-## Architecture: KISS
-This service is built using a minimalist architecture, ensuring that each component has a single responsibility:
+- **Flask**: Lightweight Python web framework.
+- **SQLAlchemy**: ORM layer for PostgreSQL access.
+- **JWT**: Stateless user session tokens.
+- **RabbitMQ**: Event broker, publishing events to `auth-events` queue.
+- **Environment Variables**: Managed via `dotenv`.
+- **Password Hashing**: PBKDF2 with SHA256.
 
-- **Flask**: Simple web framework with minimal setup.
-- **SQLAlchemy**: ORM used only where necessary (e.g., `User` model).
-- **JWT**: Used for stateless user sessions.
-- **Environment Variables**: Handled by `dotenv` for secure config management.
-- **Password Hashing**: PBKDF2 used directly with `hashlib` to avoid external dependencies.
-
-This approach makes the service easy to understand, maintain, and deploy.
+The event-driven messaging extends the architecture beyond REST, enabling scalable asynchronous processing.
 
 ## Dependencies
 - Flask
@@ -37,6 +38,7 @@ This approach makes the service easy to understand, maintain, and deploy.
 - Flask-SQLAlchemy
 - python-dotenv
 - PyJWT
+- pika (RabbitMQ client)
 - PostgreSQL
 
 ## External Connections Diagram
@@ -49,14 +51,24 @@ This approach makes the service easy to understand, maintain, and deploy.
                                                               │ DB URI
                                                         ┌─────▼──────┐
                                                         │ PostgreSQL │
-                                                        └────────────┘
+                                                        └─────┬──────┘
+                                                              │
+                                                              │ Events published
+                                                       ┌──────▼───────┐
+                                                       │ RabbitMQ     │
+                                                       │ Queue:       │
+                                                       │ auth-events  │
+                                                       └──────────────┘
 ```
 
 ## Environment Variables
 
 - `DATABASE_URL`: PostgreSQL connection string
 - `SECRET_KEY`: Used to sign JWT tokens
-- `SQLALCHEMY_TRACK_MODIFICATIONS`: Optional, set to `False` by default
+- `RABBITMQ_HOST`: RabbitMQ broker hostname
+- `RABBITMQ_PORT`: RabbitMQ port
+- `RABBITMQ_QUEUE`: RabbitMQ queue name (`auth-events`)
+- `SQLALCHEMY_TRACK_MODIFICATIONS`: Optional, default `False`
 
 ## Running the Service
 ```bash

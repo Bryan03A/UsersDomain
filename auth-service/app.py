@@ -9,6 +9,7 @@ import pika
 import json
 
 from dotenv import load_dotenv
+from datetime import datetime, timedelta, UTC
 
 
 load_dotenv()
@@ -35,7 +36,7 @@ def generate_token(user) -> str:
     payload = {
         'user_id': str(user.id),
         'username': user.username,
-        'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=1)
+        'exp': datetime.now(UTC) + timedelta(hours=1)
     }
     return jwt.encode(payload, app.config['SECRET_KEY'], algorithm='HS256')
 
@@ -52,7 +53,7 @@ def publish_event(event_name, data):
         event_payload = {
             "event": event_name,
             "data": data,
-            "timestamp": datetime.datetime.utcnow().isoformat()
+            "timestamp": datetime.now(UTC).isoformat()
         }
 
         channel.basic_publish(
@@ -69,6 +70,11 @@ def publish_event(event_name, data):
         print(f"[Publisher Error] {str(e)}")
 
 # ───────────── Endpoints ─────────────
+@app.route('/test-event', methods=['GET'])
+def test_event():
+    publish_event('TestEvent', {"msg": "Esto es una prueba"})
+    return jsonify({"message": "Evento de prueba enviado"})
+
 @app.route('/auth/health', methods=['GET'])
 def health():
     try:
@@ -93,15 +99,20 @@ def login():
     ).first()
 
     if user and hash_password(data.get('password')) == user.password:
-        # Publish event to RabbitMQ
+        # Publish event to RabbitMQ on successful login
         publish_event('UserLoggedIn', {
-            "user_id": user.id,
+            "user_id": str(user.id),
             "username": user.username,
             "email": user.email
         })
         return jsonify({'token': generate_token(user)})
-    
-    return jsonify({'message': 'Invalid credentials'}), 401
+    else:
+        # Publish event to RabbitMQ on login failure
+        publish_event('UserLoginFailed', {
+            "username": data.get('username'),
+            "reason": "Invalid credentials"
+        })
+        return jsonify({'message': 'Invalid credentials'}), 401
 
 @app.route('/profile', methods=['GET'])
 def profile():

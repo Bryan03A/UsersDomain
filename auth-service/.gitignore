@@ -14,6 +14,7 @@ venv/
 .idea/
 .vscode/
 auth.txt
+test_app.py
 
 # Ignore installed dependencies in Python
 *.egg-info/

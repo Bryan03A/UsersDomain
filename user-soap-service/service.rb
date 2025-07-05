@@ -5,6 +5,7 @@ require 'dotenv'
 require 'openssl'
 require 'securerandom'
 require 'sinatra/cross_origin'
+require 'bunny'
 
 # Enable Cross-Origin Requests (CORS)
 configure do
@@ -77,6 +78,33 @@ def hash_password(password)
   hashed.unpack1('H*')
 end
 
+# Método para publicar evento en RabbitMQ
+def publish_event(event_name, data)
+  begin
+    connection = Bunny.new(
+      hostname: ENV['RABBITMQ_HOST'],
+      port: ENV['RABBITMQ_PORT'].to_i
+    )
+    connection.start
+
+    channel = connection.create_channel
+    queue_name = ENV['RABBITMQ_QUEUE'] || 'user-events'
+    queue = channel.queue(queue_name, durable: true)
+
+    event_payload = {
+      event: event_name,
+      data: data,
+      timestamp: Time.now.utc.iso8601
+    }.to_json
+
+    channel.default_exchange.publish(event_payload, routing_key: queue_name, persistent: true)
+    connection.close
+    puts "[Publisher] Sent event: #{event_name}"
+  rescue => e
+    puts "[Publisher Error] #{e.message}"
+  end
+end
+
 # Health check endpoint for Load Balancer
 get '/user-soap/health' do
   begin
@@ -109,7 +137,41 @@ post '/register' do
     city = doc.xpath('//user:city', ns).text.strip
 
     hashed_password = hash_password(password)
-    user_id = store_user(username, hashed_password, first_name, last_name, dni, email, city)
+
+    begin
+      user_id = store_user(username, hashed_password, first_name, last_name, dni, email, city)
+    rescue PG::UniqueViolation => e
+      # Publish event to RabbitMQ about duplicate error
+      publish_event('UserRegistrationFailed', {
+        username: username,
+        dni: dni,
+        email: email,
+        error: "Duplicate entry detected",
+        details: e.message
+      })
+
+      status 409
+      return "<soapenv:Envelope xmlns:soapenv='http://schemas.xmlsoap.org/soap/envelope/' xmlns:us='http://example.com/userservice'>
+        <soapenv:Header/>
+        <soapenv:Body>
+          <us:registerUserResponse>
+            <us:message>Duplicate user information detected (username, dni, or email).</us:message>
+          </us:registerUserResponse>
+        </soapenv:Body>
+      </soapenv:Envelope>"
+    end
+
+    user_data = {
+      id: user_id,
+      username: username,
+      first_name: first_name,
+      last_name: last_name,
+      dni: dni,
+      email: email,
+      city: city
+    }
+
+    publish_event('UserRegistered', user_data)
 
     content_type :xml
     "<soapenv:Envelope xmlns:soapenv='http://schemas.xmlsoap.org/soap/envelope/' xmlns:us='http://example.com/userservice'>
