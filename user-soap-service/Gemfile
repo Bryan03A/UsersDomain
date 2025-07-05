@@ -13,3 +13,4 @@ gem 'securerandom'
 gem 'sinatra-cross_origin'  # To enable CORS in Sinatra
 gem 'rackup'
 gem 'puma'
+gem 'bunny'

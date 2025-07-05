@@ -2,15 +2,13 @@ from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import text
 import jwt
-import datetime
 import hashlib
 import os
 import pika
 import json
 
 from dotenv import load_dotenv
-from datetime import datetime, timedelta, UTC
-
+from datetime import datetime, timedelta, timezone  # 👈 reemplazo correcto
 
 load_dotenv()
 app = Flask(__name__)
@@ -36,7 +34,7 @@ def generate_token(user) -> str:
     payload = {
         'user_id': str(user.id),
         'username': user.username,
-        'exp': datetime.now(UTC) + timedelta(hours=1)
+        'exp': datetime.now(timezone.utc) + timedelta(hours=1)  # 👈 cambio aquí
     }
     return jwt.encode(payload, app.config['SECRET_KEY'], algorithm='HS256')
 
@@ -53,7 +51,7 @@ def publish_event(event_name, data):
         event_payload = {
             "event": event_name,
             "data": data,
-            "timestamp": datetime.now(UTC).isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat()  # 👈 cambio aquí también
         }
 
         channel.basic_publish(
@@ -99,7 +97,6 @@ def login():
     ).first()
 
     if user and hash_password(data.get('password')) == user.password:
-        # Publish event to RabbitMQ on successful login
         publish_event('UserLoggedIn', {
             "user_id": str(user.id),
             "username": user.username,
@@ -107,7 +104,6 @@ def login():
         })
         return jsonify({'token': generate_token(user)})
     else:
-        # Publish event to RabbitMQ on login failure
         publish_event('UserLoginFailed', {
             "username": data.get('username'),
             "reason": "Invalid credentials"
