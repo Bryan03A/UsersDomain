@@ -1,34 +1,56 @@
-# Service Overview: User SOAP Microservice
- 
-This microservice is designed to provide user information through a SOAP-style HTTP GET endpoint. It connects to a PostgreSQL database to retrieve user data by username and exposes a health check endpoint to monitor service status. The service uses Gorilla Mux for routing and supports CORS for a specific frontend origin. 
+# 🚀 Service Overview: User SOAP Microservice
 
-## Architectural Style
+This microservice provides user information through a **SOAP-style HTTP GET endpoint**. It connects to a PostgreSQL database to retrieve user data by username and exposes a health check endpoint to monitor service status. The service uses [Gorilla Mux](https://github.com/gorilla/mux) for routing and supports CORS for a specific frontend origin.
 
-The architecture of this service follows a **Microservices** pattern, focusing on a single responsibility — user information retrieval. The communication style is **SOAP over HTTP**, which is somewhat uncommon in modern microservices but suits legacy systems or strict contract-based communication.
+---
 
-The service operates as a stateless RESTful HTTP server with SOAP messaging format, making it interoperable with systems expecting XML-based SOAP envelopes.
+## 🏗 Architectural Style
 
-## Communication Type
+This service follows a **Microservices** architecture focusing on a single responsibility: user information retrieval.  
+Communication is done via **SOAP over HTTP**, suitable for legacy or strict contract-based systems.
 
-- **Request/Response (Synchronous communication)**: The client sends a request with a username parameter and waits for the XML SOAP response with user details.
-- **HTTP/1.1 protocol**: Transport layer for SOAP messages.
-  
-## Endpoints
+It operates as a stateless HTTP server with SOAP messaging, enabling interoperability with XML SOAP envelope clients.
 
-| Endpoint           | Method | Description                         | Response Content-Type  |
-|--------------------|--------|-----------------------------------|-----------------------|
-| `/user/soap`       | GET    | Retrieves user data by username via SOAP response | `text/xml`            |
-| `/user-search/health` | GET    | Health check endpoint, returns service status      | `text/plain` (text)   |
+---
 
-## Key Components Explained
+## 🔗 Communication Type
 
-- **Database Initialization (`initDB`)**: Loads environment variables for PostgreSQL config, opens connection, and verifies connectivity.
-- **User struct**: Defines the user data structure returned by the service (ID and Username).
-- **`getUserByUsernameSOAP` Handler**: Reads `username` query param, queries the DB, formats a SOAP XML response, and sends it back.
-- **`healthCheck` Handler**: Simple DB ping test to ensure the service and DB connection are alive.
-- **CORS configuration**: Allows cross-origin requests only from the specified frontend URL with GET and POST methods.
+- **Request/Response (Synchronous):**  
+  Client sends a request with a `username` parameter and waits for an XML SOAP response containing user details.
 
-## Console Diagram of Communication Flow
+- **Protocol:** HTTP/1.1 transports SOAP messages.
+
+---
+
+## 🌐 Endpoints
+
+| Endpoint              | Method | Description                                      | Response Content-Type |
+|-----------------------|--------|------------------------------------------------|-----------------------|
+| `/user/soap`          | GET    | Retrieve user data by username (SOAP response) | `text/xml`            |
+| `/user-search/health` | GET    | Health check endpoint (service status)          | `text/plain`          |
+
+---
+
+## ⚙️ Key Components
+
+- **`initDB`:**  
+  Loads PostgreSQL configuration from environment variables, establishes DB connection, and verifies connectivity.
+
+- **`User` struct:**  
+  Defines user data model (ID and Username).
+
+- **`getUserByUsernameSOAP` handler:**  
+  Processes `username` query parameter, queries DB, constructs SOAP XML response.
+
+- **`healthCheck` handler:**  
+  Performs DB ping to verify service and DB availability.
+
+- **CORS Configuration:**  
+  Allows requests only from the specified frontend origin, permitting GET and POST methods.
+
+---
+
+## 📊 Communication Flow Diagram
 
 ```text
 +-------------+          HTTP GET /user/soap?username={username}          +---------------+
@@ -68,6 +90,9 @@ The service operates as a stateless RESTful HTTP server with SOAP messaging form
 +-------------+                                                   +---------------+
 ``` 
 
-## Summary
- 
-This microservice is a specialized, SOAP-based user information provider built with Go, connecting securely to PostgreSQL. It uses synchronous HTTP communication with SOAP XML responses and enforces CORS for a specific frontend origin. The architecture is simple, modular, and focused, adhering to microservice principles with clear separation of concerns and health monitoring.
+## 📝 Summary
+
+This Go-based microservice delivers user info through SOAP over HTTP, securely interfacing with PostgreSQL. It uses synchronous communication and enforces CORS for a specific frontend origin. The design is clean and modular, following microservice principles with built-in health monitoring.
+
+---
+
