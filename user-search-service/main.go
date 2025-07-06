@@ -11,7 +11,6 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
-	"github.com/rs/cors"
 )
 
 var db *sql.DB
@@ -108,15 +107,6 @@ func main() {
 	r.HandleFunc("/user/soap", getUserByUsernameSOAP).Methods("GET")
 	r.HandleFunc("/user-search/health", healthCheck).Methods("GET")
 
-	c := cors.New(cors.Options{
-		AllowedOrigins:   []string{"http://3.227.120.143:8080"},
-		AllowedMethods:   []string{"GET", "POST"},
-		AllowedHeaders:   []string{"Content-Type"},
-		AllowCredentials: true,
-	})
-
-	handler := c.Handler(r)
-
 	fmt.Println("🚀 SOAP service started on port 5016...")
-	log.Fatal(http.ListenAndServe("0.0.0.0:5016", handler))
+	log.Fatal(http.ListenAndServe("0.0.0.0:5016", r))
 }

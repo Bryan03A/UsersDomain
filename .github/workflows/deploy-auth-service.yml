@@ -7,73 +7,38 @@ on:
       - test
 
 jobs:
-  determine-deploy-context:
-    name: 🔧 Determine Branch and Key
+  clone-and-deploy:
+    name: Clone, Build and Deploy Microservices
     runs-on: ubuntu-latest
-    outputs:
-      deploy-branch: ${{ steps.vars.outputs.deploy-branch }}
-      deploy-key-name: ${{ steps.vars.outputs.deploy-key-name }}
+
     steps:
-      - id: vars
-        run: |
-          BRANCH=${GITHUB_REF##*/}
-          echo "DEBUG: branch = $BRANCH"
-
-          if [[ "$BRANCH" == "main" ]]; then
-            echo "deploy-branch=main" >> $GITHUB_OUTPUT
-            echo "deploy-key-name=EC2_SSH_KEY_MAIN" >> $GITHUB_OUTPUT
-          else
-            echo "deploy-branch=test" >> $GITHUB_OUTPUT
-            echo "deploy-key-name=EC2_SSH_KEY_TEST" >> $GITHUB_OUTPUT
-          fi
-
-  build-and-deploy-microservices:
-    name: 🚀 Build & Deploy Microservices
-    needs: determine-deploy-context
-    runs-on: ubuntu-latest
-    env:
-      DEPLOY_BRANCH: ${{ needs.determine-deploy-context.outputs.deploy-branch }}
-    steps:
-      - name: 🧠 Determine Host and Load SSH Key
-        id: prepare
-        run: |
-          if [[ "${{ needs.determine-deploy-context.outputs.deploy-branch }}" == "main" ]]; then
-            echo "DEPLOY_HOST=${{ secrets.EC2_HOST_MAIN }}" >> $GITHUB_ENV
-            echo "${{ secrets.EC2_SSH_KEY_MAIN }}" > private_key.pem
-          else
-            echo "DEPLOY_HOST=${{ secrets.EC2_HOST_TEST }}" >> $GITHUB_ENV
-            echo "${{ secrets.EC2_SSH_KEY_TEST }}" > private_key.pem
-          fi
-          chmod 600 private_key.pem
-
-      - name: 🖥️ SSH and Deploy Code
+      - name: SSH into EC2 and Deploy
         uses: appleboy/ssh-action@v1.0.0
         with:
-          host: ${{ env.DEPLOY_HOST }}
+          host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets[needs.determine-deploy-context.outputs.deploy-key-name] }}
+          key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            echo "🚀 Deploying branch $DEPLOY_BRANCH to host $DEPLOY_HOST"
-
-            REPO_CODE="https://github.com/Bryan03A/ArticlesDomain.git"
-            REPO_ENVS="https://${{ secrets.ENV_REPO_TOKEN }}@github.com/Bryan03A/ArticlesDomain-envs.git"
+            # Repository setup
+            REPO_CODE="https://github.com/Bryan03A/UsersDomain.git"
+            REPO_ENVS="https://${{ secrets.ENV_REPO_TOKEN }}@github.com/Bryan03A/DomainUsers-envs.git"
 
             mkdir -p ~/deploy-code ~/deploy-envs
 
             cd ~/deploy-code
-            git clone -b $DEPLOY_BRANCH "$REPO_CODE" ArticlesDomain
+            git clone -b test "$REPO_CODE" UsersDomain
 
             cd ~/deploy-envs
-            git clone "$REPO_ENVS" ArticlesDomain-envs
+            git clone "$REPO_ENVS" DomainUsers-envs
 
-            if [ -d ~/deploy-envs/ArticlesDomain-envs/UserDomain ]; then
-              cp -rf ~/deploy-envs/ArticlesDomain-envs/UserDomain/. ~/deploy-code/ArticlesDomain/
+            if [ -d ~/deploy-envs/DomainUsers-envs/UserDomain ]; then
+              cp -rf ~/deploy-envs/DomainUsers-envs/UserDomain/. ~/deploy-code/UsersDomain/
             fi
 
             docker login -u bfury0329 -p "${{ secrets.DOCKER_HUB_PASSWORD }}"
             docker network inspect app-network >/dev/null 2>&1 || docker network create app-network
 
-            cd ~/deploy-code/ArticlesDomain
+            cd ~/deploy-code/UsersDomain
             for dir in */ ; do
               service=$(basename "$dir")
               if [ -f "$dir/Dockerfile" ]; then
@@ -88,34 +53,20 @@ jobs:
               fi
             done
 
-  post-deploy-cleanup:
-    name: 🧹 Post-Deploy Cleanup
+  cleanup:
+    name: Cleanup Temporary Folders and Dangling Docker Images
     runs-on: ubuntu-latest
-    needs:
-      - determine-deploy-context
-      - build-and-deploy-microservices
-    env:
-      DEPLOY_BRANCH: ${{ needs.determine-deploy-context.outputs.deploy-branch }}
-    steps:
-      - name: 🔐 Prepare SSH Key and Host
-        run: |
-          if [[ "${{ needs.determine-deploy-context.outputs.deploy-branch }}" == "main" ]]; then
-            echo "${{ secrets.EC2_SSH_KEY_MAIN }}" > private_key.pem
-            echo "DEPLOY_HOST=${{ secrets.EC2_HOST_MAIN }}" >> $GITHUB_ENV
-          else
-            echo "${{ secrets.EC2_SSH_KEY_TEST }}" > private_key.pem
-            echo "DEPLOY_HOST=${{ secrets.EC2_HOST_TEST }}" >> $GITHUB_ENV
-          fi
-          chmod 600 private_key.pem
+    needs: clone-and-deploy
 
-      - name: 🧽 Clean Docker and Deployment Folders
+    steps:
+      - name: SSH and Clean Temporary Directories and Docker Images
         uses: appleboy/ssh-action@v1.0.0
         with:
-          host: ${{ env.DEPLOY_HOST }}
+          host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets[needs.determine-deploy-context.outputs.deploy-key-name] }}
+          key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            echo "🧹 Cleaning up deployment folders..."
+            echo "🧹 Cleaning up temporary deployment folders..."
             rm -rf ~/deploy-code ~/deploy-envs
             echo "✅ Folders cleaned."
             echo "🧽 Removing dangling Docker images..."
