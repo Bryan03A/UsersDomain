@@ -3,7 +3,6 @@ name: Build, Push, and Deploy All Microservices Sequentially
 on:
   push:
     branches:
-      - main
       - test
 
 jobs:
