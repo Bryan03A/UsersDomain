@@ -8,7 +8,6 @@ on:
 
 jobs:
   set-vars:
-    name: Set deployment variables
     runs-on: ubuntu-latest
     outputs:
       deploy-host: ${{ steps.set-vars.outputs.deploy-host }}
@@ -29,39 +28,29 @@ jobs:
             echo "deploy-key-name=EC2_SSH_KEY_TEST" >> $GITHUB_OUTPUT
           fi
 
-      - id: debug-vars
-        run: |
-          echo "DEBUG: branch = ${{ steps.set-vars.outputs.branch }}"
-          echo "DEBUG: deploy-host = ${{ steps.set-vars.outputs.deploy-host }}"
-          echo "DEBUG: deploy-branch = ${{ steps.set-vars.outputs.deploy-branch }}"
-          echo "DEBUG: deploy-key-name = ${{ steps.set-vars.outputs.deploy-key-name }}"
-
   clone-and-deploy:
-    name: Clone, Build and Deploy Microservices
-    runs-on: ubuntu-latest
     needs: set-vars
+    runs-on: ubuntu-latest
+    env:
+      DEPLOY_BRANCH: ${{ needs.set-vars.outputs.deploy-branch }}
     steps:
-      - name: Checkout repository (optional)
-        uses: actions/checkout@v3
-
-      - name: Save SSH key to file
+      - name: Determine host and ssh key
+        id: prepare
         run: |
-          if [[ "${{ needs.set-vars.outputs.deploy-key-name }}" == "EC2_SSH_KEY_MAIN" ]]; then
+          if [[ "${{ needs.set-vars.outputs.deploy-branch }}" == "main" ]]; then
+            echo "DEPLOY_HOST=${{ secrets.EC2_HOST_MAIN }}" >> $GITHUB_ENV
             echo "${{ secrets.EC2_SSH_KEY_MAIN }}" > private_key.pem
           else
             echo "${{ secrets.EC2_SSH_KEY_TEST }}" > private_key.pem
           fi
           chmod 600 private_key.pem
 
-      - name: Debug deploy-host
-        run: echo "Deploy host is ${{ needs.set-vars.outputs.deploy-host }}"
-
       - name: SSH into EC2 and Deploy
         uses: appleboy/ssh-action@v1.0.0
         with:
           host: ${{ needs.set-vars.outputs.deploy-host }}
           username: ${{ secrets.EC2_USER }}
-          key: private_key.pem
+          key: ${{ secrets[needs.set-vars.outputs.deploy-key-name] }}
           script: |
             REPO_CODE="https://github.com/Bryan03A/UsersDomain.git"
             REPO_ENVS="https://${{ secrets.ENV_REPO_TOKEN }}@github.com/Bryan03A/DomainUsers-envs.git"
@@ -97,25 +86,29 @@ jobs:
             done
 
   cleanup:
-    name: Cleanup Temporary Folders and Dangling Docker Images
+    name: Cleanup
     runs-on: ubuntu-latest
-    needs: clone-and-deploy
+    needs:
+      - set-vars
+      - clone-and-deploy
+    env:
+      DEPLOY_BRANCH: ${{ needs.set-vars.outputs.deploy-branch }}
     steps:
-      - name: Save SSH key to file for cleanup
+      - name: Determine host and write SSH key
         run: |
-          if [[ "${{ needs.set-vars.outputs.deploy-key-name }}" == "EC2_SSH_KEY_MAIN" ]]; then
+          if [[ "${{ needs.set-vars.outputs.deploy-branch }}" == "main" ]]; then
             echo "${{ secrets.EC2_SSH_KEY_MAIN }}" > private_key.pem
           else
             echo "${{ secrets.EC2_SSH_KEY_TEST }}" > private_key.pem
           fi
           chmod 600 private_key.pem
 
-      - name: SSH and Clean Temporary Directories and Docker Images
+      - name: Clean temp folders and Docker
         uses: appleboy/ssh-action@v1.0.0
         with:
           host: ${{ needs.set-vars.outputs.deploy-host }}
           username: ${{ secrets.EC2_USER }}
-          key: private_key.pem
+          key: ${{ secrets[needs.set-vars.outputs.deploy-key-name] }}
           script: |
             echo "🧹 Cleaning up temporary deployment folders..."
             rm -rf ~/deploy-code ~/deploy-envs
