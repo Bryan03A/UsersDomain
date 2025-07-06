@@ -3,12 +3,35 @@ name: Build, Push, and Deploy All Microservices Sequentially
 on:
   push:
     branches:
-      - main
       - test
+      - main
 
 jobs:
   determine-deploy-context:
     name: 🔧 Determine Branch and Key
+  set-vars:
+    runs-on: ubuntu-latest
+    outputs:
+      deploy-host: ${{ steps.set-vars.outputs.deploy-host }}
+      deploy-branch: ${{ steps.set-vars.outputs.deploy-branch }}
+      deploy-key-name: ${{ steps.set-vars.outputs.deploy-key-name }}
+    steps:
+      - id: set-vars
+        run: |
+          BRANCH=${GITHUB_REF##*/}
+          echo "branch=$BRANCH" >> $GITHUB_OUTPUT
+          if [[ "$BRANCH" == "main" ]]; then
+            echo "deploy-host=${{ secrets.EC2_HOST_MAIN }}" >> $GITHUB_OUTPUT
+            echo "deploy-branch=main" >> $GITHUB_OUTPUT
+            echo "deploy-key-name=EC2_SSH_KEY_MAIN" >> $GITHUB_OUTPUT
+          else
+            echo "deploy-host=${{ secrets.EC2_HOST_TEST }}" >> $GITHUB_OUTPUT
+            echo "deploy-branch=test" >> $GITHUB_OUTPUT
+            echo "deploy-key-name=EC2_SSH_KEY_TEST" >> $GITHUB_OUTPUT
+          fi
+
+  clone-and-deploy:
+    needs: set-vars
     runs-on: ubuntu-latest
     outputs:
       deploy-branch: ${{ steps.vars.outputs.deploy-branch }}
@@ -33,6 +56,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       DEPLOY_BRANCH: ${{ needs.determine-deploy-context.outputs.deploy-branch }}
+    env:
+      DEPLOY_BRANCH: ${{ needs.set-vars.outputs.deploy-branch }}
     steps:
       - name: 🧠 Determine Host and Load SSH Key
         id: prepare
@@ -47,11 +72,25 @@ jobs:
           chmod 600 private_key.pem
 
       - name: 🖥️ SSH and Deploy Code
+      - name: Determine host and ssh key
+        id: prepare
+        run: |
+          if [[ "${{ needs.set-vars.outputs.deploy-branch }}" == "main" ]]; then
+            echo "DEPLOY_HOST=${{ secrets.EC2_HOST_MAIN }}" >> $GITHUB_ENV
+            echo "${{ secrets.EC2_SSH_KEY_MAIN }}" > private_key.pem
+          else
+            echo "${{ secrets.EC2_SSH_KEY_TEST }}" > private_key.pem
+          fi
+          chmod 600 private_key.pem
+
+      - name: SSH into EC2 and Deploy
         uses: appleboy/ssh-action@v1.0.0
         with:
           host: ${{ env.DEPLOY_HOST }}
+          host: ${{ needs.set-vars.outputs.deploy-host }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets[needs.determine-deploy-context.outputs.deploy-key-name] }}
+          key: ${{ secrets[needs.set-vars.outputs.deploy-key-name] }}
           script: |
             echo "🚀 Deploying branch $DEPLOY_BRANCH to host $DEPLOY_HOST"
 
@@ -61,6 +100,7 @@ jobs:
             mkdir -p ~/deploy-code ~/deploy-envs
 
             cd ~/deploy-code
+            git clone -b $DEPLOY_BRANCH "$REPO_CODE" UsersDomain
             git clone -b $DEPLOY_BRANCH "$REPO_CODE" UsersDomain
 
             cd ~/deploy-envs
@@ -90,12 +130,19 @@ jobs:
 
   post-deploy-cleanup:
     name: 🧹 Post-Deploy Cleanup
+  cleanup:
+    name: Cleanup
     runs-on: ubuntu-latest
     needs:
       - determine-deploy-context
       - build-and-deploy-microservices
     env:
       DEPLOY_BRANCH: ${{ needs.determine-deploy-context.outputs.deploy-branch }}
+    needs:
+      - set-vars
+      - clone-and-deploy
+    env:
+      DEPLOY_BRANCH: ${{ needs.set-vars.outputs.deploy-branch }}
     steps:
       - name: 🔐 Prepare SSH Key and Host
         run: |
@@ -109,11 +156,23 @@ jobs:
           chmod 600 private_key.pem
 
       - name: 🧽 Clean Docker and Deployment Folders
+      - name: Determine host and write SSH key
+        run: |
+          if [[ "${{ needs.set-vars.outputs.deploy-branch }}" == "main" ]]; then
+            echo "${{ secrets.EC2_SSH_KEY_MAIN }}" > private_key.pem
+          else
+            echo "${{ secrets.EC2_SSH_KEY_TEST }}" > private_key.pem
+          fi
+          chmod 600 private_key.pem
+
+      - name: Clean temp folders and Docker
         uses: appleboy/ssh-action@v1.0.0
         with:
           host: ${{ env.DEPLOY_HOST }}
+          host: ${{ needs.set-vars.outputs.deploy-host }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets[needs.determine-deploy-context.outputs.deploy-key-name] }}
+          key: ${{ secrets[needs.set-vars.outputs.deploy-key-name] }}
           script: |
             echo "🧹 Cleaning up deployment folders..."
             rm -rf ~/deploy-code ~/deploy-envs
