@@ -29,23 +29,32 @@ jobs:
             echo "deploy-key-name=EC2_SSH_KEY_TEST" >> $GITHUB_OUTPUT
           fi
 
+      - id: debug-vars
+        run: |
+          echo "DEBUG: branch = ${{ steps.set-vars.outputs.branch }}"
+          echo "DEBUG: deploy-host = ${{ steps.set-vars.outputs.deploy-host }}"
+          echo "DEBUG: deploy-branch = ${{ steps.set-vars.outputs.deploy-branch }}"
+          echo "DEBUG: deploy-key-name = ${{ steps.set-vars.outputs.deploy-key-name }}"
+
   clone-and-deploy:
     name: Clone, Build and Deploy Microservices
     runs-on: ubuntu-latest
     needs: set-vars
     steps:
-      - name: Checkout repository (for workflow context, optional)
+      - name: Checkout repository (optional)
         uses: actions/checkout@v3
 
       - name: Save SSH key to file
         run: |
-          # Escoger la clave SSH correcta según la variable
           if [[ "${{ needs.set-vars.outputs.deploy-key-name }}" == "EC2_SSH_KEY_MAIN" ]]; then
             echo "${{ secrets.EC2_SSH_KEY_MAIN }}" > private_key.pem
           else
             echo "${{ secrets.EC2_SSH_KEY_TEST }}" > private_key.pem
           fi
           chmod 600 private_key.pem
+
+      - name: Debug deploy-host
+        run: echo "Deploy host is ${{ needs.set-vars.outputs.deploy-host }}"
 
       - name: SSH into EC2 and Deploy
         uses: appleboy/ssh-action@v1.0.0
