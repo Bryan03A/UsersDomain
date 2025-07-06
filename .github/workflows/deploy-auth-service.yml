@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - test
+      - main
 
 jobs:
   clone-and-deploy:
@@ -12,10 +13,22 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Set deployment variables by branch
+        id: vars
+        run: |
+          echo "GIT_BRANCH=${GITHUB_REF##*/}" >> $GITHUB_ENV
+          if [[ "${GITHUB_REF##*/}" == "main" ]]; then
+            echo "DEPLOY_HOST=${{ secrets.EC2_HOST_MAIN }}" >> $GITHUB_ENV
+            echo "DEPLOY_BRANCH=main" >> $GITHUB_ENV
+          else
+            echo "DEPLOY_HOST=${{ secrets.EC2_HOST_TEST }}" >> $GITHUB_ENV
+            echo "DEPLOY_BRANCH=test" >> $GITHUB_ENV
+          fi
+
       - name: SSH into EC2 and Deploy
         uses: appleboy/ssh-action@v1.0.0
         with:
-          host: ${{ secrets.EC2_HOST }}
+          host: ${{ env.DEPLOY_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
@@ -26,7 +39,7 @@ jobs:
             mkdir -p ~/deploy-code ~/deploy-envs
 
             cd ~/deploy-code
-            git clone -b test "$REPO_CODE" UsersDomain
+            git clone -b $DEPLOY_BRANCH "$REPO_CODE" UsersDomain
 
             cd ~/deploy-envs
             git clone "$REPO_ENVS" DomainUsers-envs
@@ -62,7 +75,7 @@ jobs:
       - name: SSH and Clean Temporary Directories and Docker Images
         uses: appleboy/ssh-action@v1.0.0
         with:
-          host: ${{ secrets.EC2_HOST }}
+          host: ${{ env.DEPLOY_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
