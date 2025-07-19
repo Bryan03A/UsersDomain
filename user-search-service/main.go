@@ -6,7 +6,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-
 	"strconv"
 
 	"github.com/gorilla/mux"
@@ -15,82 +14,80 @@ import (
 	"github.com/rs/cors"
 )
 
-// Configuración de la base de datos PostgreSQL  🚀
+// PostgreSQL database configuration 🚀
 const (
-	POSTGRESQL_HOST     = "aws-0-us-west-1.pooler.supabase.com"
-	POSTGRESQL_PORT     = 6543
-	POSTGRESQL_DATABASE = "postgres"
-	POSTGRESQL_USER     = "postgres.imfqyzgimtercyyqeqof"
-	POSTGRESQL_PASSWORD = "1997Guallaba"
+	POSTGRESQL_HOST     = "23.23.135.253"
+	POSTGRESQL_PORT     = 5432
+	POSTGRESQL_DATABASE = "mydb"
+	POSTGRESQL_USER     = "admin"
+	POSTGRESQL_PASSWORD = "admin123"
 )
 
 var db *sql.DB
 
-// Estructura que representa a un usuario
+// User structure
 type User struct {
 	ID       string `json:"id"`
 	Username string `json:"username"`
 }
 
-// Inicializar la base de datos desde variables de entorno
+// Initialize the database using environment variables
 func initDB() {
-	// Cargar variables desde .env
+	// Load variables from .env file
 	err := godotenv.Load()
 	if err != nil {
-		log.Fatal("❌ Error al cargar el archivo .env")
+		log.Fatal("❌ Failed to load .env file")
 	}
 
-	// Leer variables de entorno
+	// Read environment variables
 	host := os.Getenv("POSTGRESQL_HOST")
 	portStr := os.Getenv("POSTGRESQL_PORT")
 	user := os.Getenv("POSTGRESQL_USER")
 	password := os.Getenv("POSTGRESQL_PASSWORD")
 	dbname := os.Getenv("POSTGRESQL_DATABASE")
 
-	// Convertir el puerto a entero
+	// Convert port to integer
 	port, err := strconv.Atoi(portStr)
 	if err != nil {
-		log.Fatal("Puerto inválido:", err)
+		log.Fatal("Invalid port:", err)
 	}
 
-	// Crear cadena de conexión
+	// Create connection string
 	connStr := fmt.Sprintf(
 		"host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
 		host, port, user, password, dbname,
 	)
 
-	// Conectar a la base de datos
+	// Connect to the database
 	db, err = sql.Open("postgres", connStr)
 	if err != nil {
-		log.Fatal("Error al conectar a la base de datos:", err)
+		log.Fatal("Database connection error:", err)
 	}
 
 	err = db.Ping()
 	if err != nil {
-		log.Fatal("Error al hacer ping a la base de datos:", err)
+		log.Fatal("Failed to ping the database:", err)
 	}
 
-	fmt.Println("✅ Conectado a PostgreSQL exitosamente")
+	fmt.Println("✅ Successfully connected to PostgreSQL")
 }
 
-// Función SOAP que busca un usuario por su nombre
+// SOAP function to get a user by username
 func getUserByUsernameSOAP(w http.ResponseWriter, r *http.Request) {
-	// Obtener el nombre de usuario de la solicitud SOAP
 	username := r.URL.Query().Get("username")
 	if username == "" {
-		http.Error(w, "El nombre de usuario es obligatorio", http.StatusBadRequest)
+		http.Error(w, "Username is required", http.StatusBadRequest)
 		return
 	}
 
-	// Consultar la base de datos
 	var user User
 	err := db.QueryRow("SELECT id, username FROM \"user\" WHERE username = $1", username).Scan(&user.ID, &user.Username)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Error al consultar la base de datos: %s", err), http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("Database query error: %s", err), http.StatusInternalServerError)
 		return
 	}
 
-	// Crear el mensaje SOAP de respuesta
+	// SOAP response message
 	soapResponse := fmt.Sprintf(`
 		<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
 			xmlns:web="http://www.example.org/webservice">
@@ -104,33 +101,38 @@ func getUserByUsernameSOAP(w http.ResponseWriter, r *http.Request) {
 		</soapenv:Envelope>
 	`, user.ID, user.Username)
 
-	// Establecer el encabezado de respuesta como XML
 	w.Header().Set("Content-Type", "text/xml")
 	w.Write([]byte(soapResponse))
 }
 
+// Health check endpoint for load balancer
+func healthCheck(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("OK"))
+}
+
 func main() {
-	// Inicializar la base de datos
+	// Initialize database connection
 	initDB()
 
-	// Crear un enrutador para el servidor SOAP
+	// Router
 	r := mux.NewRouter()
 
-	// Ruta para consultar un usuario por su nombre
+	// Routes
 	r.HandleFunc("/user/soap", getUserByUsernameSOAP).Methods("GET")
+	r.HandleFunc("/user-search/health", healthCheck).Methods("GET") // 🔥 Health check route
 
-	// Configurar CORS
+	// CORS settings
 	c := cors.New(cors.Options{
-		AllowedOrigins:   []string{"http://3.227.120.143:8080"}, // Origen permitido (el servidor de la interfaz gráfica)
+		AllowedOrigins:   []string{"http://3.227.120.143:8080"},
 		AllowedMethods:   []string{"GET", "POST"},
 		AllowedHeaders:   []string{"Content-Type"},
 		AllowCredentials: true,
 	})
 
-	// Aplicar CORS a las rutas
 	handler := c.Handler(r)
 
-	// Iniciar el servidor HTTP en todas las interfaces
-	fmt.Println("Iniciando servidor SOAP en el puerto 5016...")
+	// Start server
+	fmt.Println("Starting SOAP server on port 5016...")
 	log.Fatal(http.ListenAndServe("0.0.0.0:5016", handler))
 }

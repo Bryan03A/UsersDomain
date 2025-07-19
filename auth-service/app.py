@@ -34,7 +34,7 @@ def generate_token(user) -> str:
     payload = {
         'user_id': str(user.id),
         'username': user.username,
-        'exp': datetime.now(timezone.utc) + timedelta(hours=1)  # 👈 cambio aquí
+        'exp': datetime.now(timezone.utc) + timedelta(hours=1)  # 👈 change here
     }
     return jwt.encode(payload, app.config['SECRET_KEY'], algorithm='HS256')
 
